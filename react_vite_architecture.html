@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>React + Vite — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #050810;
+    --surface: #0d1117;
+    --surface2: #161b22;
+    --border: #21262d;
+    --accent: #00d4ff;
+    --accent2: #ff00aa;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #e3b341;
+    --orange: #ff7c43;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --muted: #7d8590;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 2.2em;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    margin-bottom: 50px;
+  }
+
+  .section-title {
+    font-size: 0.7em;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    border-left: 2px solid var(--accent);
+    padding-left: 10px;
+  }
+
+  /* ==================== OVERVIEW ==================== */
+  .overview {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  .flow-box .label {
+    font-size: 0.7em;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .flow-box .name {
+    font-weight: 700;
+    font-size: 0.95em;
+  }
+
+  .flow-box.accent { border-color: var(--accent); }
+  .flow-box.accent .name { color: var(--accent); }
+  .flow-box.green { border-color: var(--green); }
+  .flow-box.green .name { color: var(--green); }
+  .flow-box.yellow { border-color: var(--yellow); }
+  .flow-box.yellow .name { color: var(--yellow); }
+  .flow-box.purple { border-color: var(--purple); }
+  .flow-box.purple .name { color: var(--purple); }
+  .flow-box.orange { border-color: var(--orange); }
+  .flow-box.orange .name { color: var(--orange); }
+  .flow-box.red { border-color: var(--red); }
+  .flow-box.red .name { color: var(--red); }
+
+  /* ==================== FILES GRID ==================== */
+  .files-grid {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .file-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .file-header {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .file-icon { font-size: 1.3em; }
+
+  .file-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.95em;
+  }
+
+  .file-role {
+    font-size: 0.75em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .file-tldr {
+    font-size: 0.92em;
+    font-weight: 700;
+    color: #fff;
+    padding: 13px 18px;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .file-tldr::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .file-tldr .tldr-arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1em;
+    font-weight: 900;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .file-tldr .tldr-text {
+    flex: 1;
+  }
+
+  /* per-colour backgrounds */
+  .tldr-yellow { background: rgba(227,179,65,0.13); }
+  .tldr-yellow::before { background: var(--yellow); }
+  .tldr-yellow .tldr-arrow { color: var(--yellow); }
+
+  .tldr-orange { background: rgba(255,124,67,0.13); }
+  .tldr-orange::before { background: var(--orange); }
+  .tldr-orange .tldr-arrow { color: var(--orange); }
+
+  .tldr-purple { background: rgba(188,140,255,0.13); }
+  .tldr-purple::before { background: var(--purple); }
+  .tldr-purple .tldr-arrow { color: var(--purple); }
+
+  .tldr-cyan { background: rgba(0,212,255,0.13); }
+  .tldr-cyan::before { background: var(--accent); }
+  .tldr-cyan .tldr-arrow { color: var(--accent); }
+
+  .tldr-muted { background: rgba(125,133,144,0.12); }
+  .tldr-muted::before { background: var(--muted); }
+  .tldr-muted .tldr-arrow { color: var(--muted); }
+
+  .tldr-red { background: rgba(248,81,73,0.13); }
+  .tldr-red::before { background: var(--red); }
+  .tldr-red .tldr-arrow { color: var(--red); }
+
+  .tldr-teal { background: rgba(45,212,191,0.13); }
+  .tldr-teal::before { background: #2dd4bf; }
+  .tldr-teal .tldr-arrow { color: #2dd4bf; }
+
+  .tldr-green { background: rgba(63,185,80,0.13); }
+  .tldr-green::before { background: var(--green); }
+  .tldr-green .tldr-arrow { color: var(--green); }
+
+  .file-body { padding: 10px 14px; }
+
+  .fact-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+
+  .fact-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .fact-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .fact-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78em;
+    font-weight: 700;
+    color: var(--accent);
+    flex: 1;
+  }
+
+  .fact-desc {
+    font-size: 0.75em;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .badge {
+    font-size: 0.62em;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .badge.config  { background: rgba(227,179,65,0.15);  color: var(--yellow); }
+  .badge.never   { background: rgba(248,81,73,0.15);   color: var(--red); }
+  .badge.always  { background: rgba(63,185,80,0.15);   color: var(--green); }
+  .badge.ram     { background: rgba(63,185,80,0.15);   color: var(--green); }
+  .badge.vite    { background: rgba(0,212,255,0.15);   color: var(--accent); }
+  .badge.ts      { background: rgba(188,140,255,0.15); color: var(--purple); }
+  .badge.git     { background: rgba(255,124,67,0.15);  color: var(--orange); }
+  .badge.entry   { background: rgba(255,0,170,0.15);   color: var(--accent2); }
+
+  /* ==================== INJECTION CHAIN ==================== */
+  .timeline {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+
+  .timeline-steps {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  .timeline-steps::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+  }
+
+  .step {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .step::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .step-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75em;
+    color: var(--green);
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 0.9em;
+  }
+
+  .step-detail {
+    font-size: 0.8em;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    padding-left: 102px;
+  }
+
+  .step.purple-step  { border-color: var(--purple); }
+  .step.purple-step::before { background: var(--purple); }
+  .step.orange-step  { border-color: var(--orange); }
+  .step.orange-step::before { background: var(--orange); }
+  .step.green-step   { border-color: var(--green); }
+  .step.green-step::before  { background: var(--green); }
+  .step.accent2-step { border-color: var(--accent2); }
+  .step.accent2-step::before { background: var(--accent2); }
+  .step.yellow-step  { border-color: var(--yellow); }
+  .step.yellow-step::before  { background: var(--yellow); }
+
+  /* ==================== GLOBALS ==================== */
+  .globals {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+
+  .globals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .global-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .global-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    font-weight: 700;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+
+  .global-field {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72em;
+    color: var(--muted);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    word-break: break-all;
+  }
+
+  .global-field:last-child { border-bottom: none; }
+  .global-field span { color: var(--accent); }
+
+  /* ==================== ENDPOINTS ==================== */
+  .endpoints {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+
+  .endpoint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .endpoint {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .method-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65em;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .method-badge.never  { background: rgba(248,81,73,0.2);   color: var(--red); }
+  .method-badge.rarely { background: rgba(227,179,65,0.2);  color: var(--yellow); }
+  .method-badge.always { background: rgba(63,185,80,0.2);   color: var(--green); }
+  .method-badge.git2   { background: rgba(255,124,67,0.2);  color: var(--orange); }
+
+  .endpoint-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8em;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .endpoint-desc { font-size: 0.75em; color: var(--muted); }
+
+  /* ==================== OPTIMIZATIONS ==================== */
+  .optimizations {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+  }
+
+  .opt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .opt-card {
+    background: var(--surface);
+    border: 1px solid var(--green);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .opt-title {
+    font-weight: 700;
+    font-size: 0.9em;
+    color: var(--green);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .opt-desc { font-size: 0.8em; color: var(--muted); }
+
+  .opt-before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .opt-before, .opt-after {
+    padding: 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72em;
+    word-break: break-word;
+  }
+
+  .opt-before {
+    background: rgba(248,81,73,0.1);
+    border: 1px solid rgba(248,81,73,0.3);
+    color: var(--red);
+  }
+
+  .opt-after {
+    background: rgba(63,185,80,0.1);
+    border: 1px solid rgba(63,185,80,0.3);
+    color: var(--green);
+  }
+
+  .opt-label {
+    font-size: 0.65em;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* ==================== FOOTER ==================== */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75em;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.5em; }
+    .step-detail { padding-left: 0; margin-top: 6px; }
+    .step-time { min-width: 70px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚛️ React + Vite</h1>
+<p class="subtitle">React + Vite — Complete architecture, file map & interconnections</p>
+
+<!-- ==================== 1. OVERVIEW ==================== -->
+<div class="overview">
+  <div class="section-title">1. Full interconnection map — Every file, every connection, every direction</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0;overflow:hidden;margin-bottom:16px;">
+
+    <!-- SVG MAP -->
+    <div style="width:100%;overflow-x:auto;">
+    <svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:700px;display:block;">
+      <defs>
+        <marker id="arr-cyan"   markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#00d4ff"/></marker>
+        <marker id="arr-yellow" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#e3b341"/></marker>
+        <marker id="arr-orange" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#ff7c43"/></marker>
+        <marker id="arr-green"  markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#3fb950"/></marker>
+        <marker id="arr-purple" markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#bc8cff"/></marker>
+        <marker id="arr-pink"   markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#ff00aa"/></marker>
+        <marker id="arr-teal"   markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#2dd4bf"/></marker>
+        <marker id="arr-muted"  markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#7d8590"/></marker>
+        <marker id="arr-red"    markerWidth="9" markerHeight="9" refX="8" refY="3.5" orient="auto"><path d="M0,0 L0,7 L9,3.5 z" fill="#f85149"/></marker>
+      </defs>
+
+      <!-- ══════════════════════════════════
+           ROW 1 — Config files (y=50)
+      ══════════════════════════════════ -->
+
+      <!-- package.json -->
+      <rect x="30"  y="50" width="190" height="72" rx="10" fill="#161b22" stroke="#e3b341" stroke-width="2"/>
+      <text x="125" y="76"  text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">CONFIG</text>
+      <text x="125" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#e3b341">package.json</text>
+
+      <!-- pnpm-lock.yaml -->
+      <rect x="260" y="50" width="200" height="72" rx="10" fill="#161b22" stroke="#ff7c43" stroke-width="2"/>
+      <text x="360" y="76"  text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">AUTO-GENERATED</text>
+      <text x="360" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#ff7c43">pnpm-lock.yaml</text>
+
+      <!-- tsconfig.json -->
+      <rect x="500" y="50" width="190" height="72" rx="10" fill="#161b22" stroke="#bc8cff" stroke-width="2"/>
+      <text x="595" y="76"  text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">TYPESCRIPT</text>
+      <text x="595" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#bc8cff">tsconfig.json</text>
+
+      <!-- .gitignore -->
+      <rect x="730" y="50" width="165" height="72" rx="10" fill="#161b22" stroke="#7d8590" stroke-width="2"/>
+      <text x="812" y="76"  text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">GIT</text>
+      <text x="812" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#7d8590">.gitignore</text>
+
+      <!-- ══════════════════════════════════
+           ROW 2 — Engines (y=240)
+      ══════════════════════════════════ -->
+
+      <!-- node_modules/ -->
+      <rect x="30"  y="240" width="190" height="72" rx="10" fill="#161b22" stroke="#f85149" stroke-width="2"/>
+      <text x="125" y="265" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">300 MB CACHE</text>
+      <text x="125" y="290" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#f85149">node_modules/</text>
+
+      <!-- vite.config.ts — hero node, centre -->
+      <rect x="420" y="228" width="220" height="96" rx="12" fill="#071822" stroke="#00d4ff" stroke-width="2.5"/>
+      <text x="530" y="256" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">BUILD ENGINE</text>
+      <text x="530" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="17" font-weight="700" fill="#00d4ff">vite.config.ts</text>
+      <text x="530" y="306" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#4a9db5">plugins: [react()]</text>
+
+      <!-- public/ -->
+      <rect x="900" y="240" width="165" height="72" rx="10" fill="#161b22" stroke="#2dd4bf" stroke-width="2"/>
+      <text x="982" y="265" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">STATIC FILES</text>
+      <text x="982" y="290" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#2dd4bf">public/</text>
+
+      <!-- ══════════════════════════════════
+           ROW 3 — dist/ and src/ (y=420+)
+      ══════════════════════════════════ -->
+
+      <!-- dist/ (dashed - generated output) -->
+      <rect x="900" y="400" width="165" height="72" rx="10" fill="#161b22" stroke="#7d8590" stroke-width="1.5" stroke-dasharray="6 3"/>
+      <text x="982" y="426" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">BUILD OUTPUT</text>
+      <text x="982" y="451" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#7d8590">dist/</text>
+
+      <!-- src/ container -->
+      <rect x="180" y="430" width="540" height="320" rx="12" fill="#0a0f14" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="8 4"/>
+      <text x="200" y="458" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="#3fb950">src/  ←  your workspace</text>
+
+      <!-- index.html inside src -->
+      <rect x="205" y="475" width="190" height="72" rx="8" fill="#161b22" stroke="#ff00aa" stroke-width="2"/>
+      <text x="300" y="500" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">SKELETON</text>
+      <text x="300" y="525" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#ff00aa">index.html</text>
+
+      <!-- main.tsx inside src -->
+      <rect x="205" y="590" width="190" height="72" rx="8" fill="#161b22" stroke="#bc8cff" stroke-width="2"/>
+      <text x="300" y="614" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">BRIDGE / GLUE</text>
+      <text x="300" y="639" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#bc8cff">main.tsx</text>
+
+      <!-- App.tsx inside src -->
+      <rect x="450" y="530" width="220" height="72" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+      <text x="560" y="554" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">ROOT COMPONENT</text>
+      <text x="560" y="579" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="#3fb950">App.tsx</text>
+
+      <!-- Browser -->
+      <rect x="870" y="560" width="195" height="80" rx="10" fill="#071a10" stroke="#3fb950" stroke-width="2.5"/>
+      <text x="967" y="589" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">localhost:5173</text>
+      <text x="967" y="618" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="18" font-weight="700" fill="#3fb950">🌐 Browser</text>
+
+      <!-- ══════════════════════════════════
+           ARROWS — each in its own clear lane
+      ══════════════════════════════════ -->
+
+      <!-- 1. package.json → node_modules  (straight down left side) -->
+      <line x1="125" y1="122" x2="125" y2="238" stroke="#e3b341" stroke-width="2" fill="none" marker-end="url(#arr-yellow)"/>
+      <rect x="30" y="168" width="107" height="22" rx="5" fill="#0d1117"/>
+      <text x="83" y="183" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#e3b341">npm install</text>
+
+      <!-- 2. package.json ↔ pnpm-lock  (paired, short arrows both ways) -->
+      <path d="M221 76 L258 76" stroke="#ff7c43" stroke-width="1.8" fill="none" marker-end="url(#arr-orange)"/>
+      <path d="M260 97 L223 97" stroke="#ff7c43" stroke-width="1.8" fill="none" marker-end="url(#arr-orange)"/>
+      <rect x="218" y="60" width="65" height="20" rx="4" fill="#0d1117"/>
+      <text x="250" y="74" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#ff7c43">mirrors</text>
+
+      <!-- 3. package.json → vite.config.ts  (curved, avoids centre) -->
+      <path d="M170 122 Q200 195 418 272" stroke="#e3b341" stroke-width="1.8" fill="none" marker-end="url(#arr-yellow)" stroke-dasharray="6 3"/>
+      <rect x="220" y="185" width="132" height="22" rx="5" fill="#0d1117"/>
+      <text x="286" y="200" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#e3b341">"dev":"vite" script</text>
+
+      <!-- 4. pnpm-lock → node_modules  (diagonal, left lane) -->
+      <path d="M310 122 Q250 185 195 252" stroke="#ff7c43" stroke-width="1.8" fill="none" marker-end="url(#arr-orange)" stroke-dasharray="6 3"/>
+      <rect x="216" y="178" width="130" height="22" rx="5" fill="#0d1117"/>
+      <text x="281" y="193" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#ff7c43">locks exact versions</text>
+
+      <!-- 5. tsconfig → vite.config.ts  (down, slightly left) -->
+      <path d="M580 122 L560 226" stroke="#bc8cff" stroke-width="1.8" fill="none" marker-end="url(#arr-purple)" stroke-dasharray="6 3"/>
+      <rect x="556" y="162" width="118" height="22" rx="5" fill="#0d1117"/>
+      <text x="615" y="177" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#bc8cff">TS rules for build</text>
+
+      <!-- 6. tsconfig → src/ (type-checks .tsx)  (curved right side down) -->
+      <path d="M690 86 Q760 86 760 390 Q760 460 722 462" stroke="#bc8cff" stroke-width="1.8" fill="none" marker-end="url(#arr-purple)" stroke-dasharray="6 3"/>
+      <rect x="738" y="258" width="120" height="22" rx="5" fill="#0d1117"/>
+      <text x="798" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#bc8cff">type-checks .tsx</text>
+
+      <!-- 7. .gitignore → node_modules (wide arc across top) -->
+      <path d="M730 86 Q450 140 222 258" stroke="#7d8590" stroke-width="1.5" fill="none" marker-end="url(#arr-muted)" stroke-dasharray="5 3"/>
+      <rect x="432" y="118" width="122" height="22" rx="5" fill="#0d1117"/>
+      <text x="493" y="133" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">excludes from Git</text>
+
+      <!-- 8. .gitignore → dist/  (right side down) -->
+      <path d="M895 86 Q980 86 982 398" stroke="#7d8590" stroke-width="1.5" fill="none" marker-end="url(#arr-muted)" stroke-dasharray="5 3"/>
+      <rect x="900" y="224" width="110" height="22" rx="5" fill="#0d1117"/>
+      <text x="955" y="239" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7d8590">excludes dist/</text>
+
+      <!-- 9. node_modules → vite.config.ts  (horizontal right) -->
+      <line x1="222" y1="276" x2="418" y2="276" stroke="#f85149" stroke-width="2" fill="none" marker-end="url(#arr-red)"/>
+      <rect x="250" y="258" width="138" height="22" rx="5" fill="#0d1117"/>
+      <text x="319" y="273" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#f85149">resolves imports</text>
+
+      <!-- 10. node_modules → App.tsx  (diagonal down, left lane) -->
+      <path d="M80 312 Q60 400 60 566 Q60 600 200 568" stroke="#f85149" stroke-width="1.5" fill="none" marker-end="url(#arr-red)" stroke-dasharray="6 3"/>
+      <rect x="22" y="440" width="132" height="22" rx="5" fill="#0d1117"/>
+      <text x="88" y="455" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#f85149">import useState…</text>
+
+      <!-- 11. vite.config.ts → src/  (down centre) -->
+      <line x1="530" y1="324" x2="530" y2="428" stroke="#00d4ff" stroke-width="2" fill="none" marker-end="url(#arr-cyan)"/>
+      <rect x="428" y="364" width="130" height="22" rx="5" fill="#0d1117"/>
+      <text x="493" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#00d4ff">compiles + bundles</text>
+
+      <!-- 12. vite.config.ts → public/  (horizontal right) -->
+      <line x1="640" y1="270" x2="898" y2="270" stroke="#00d4ff" stroke-width="2" fill="none" marker-end="url(#arr-cyan)"/>
+      <rect x="690" y="252" width="128" height="22" rx="5" fill="#0d1117"/>
+      <text x="754" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#00d4ff">copies as-is</text>
+
+      <!-- 13. vite.config.ts → dist/  (right side, to dist box) -->
+      <path d="M640 300 Q800 340 898 430" stroke="#00d4ff" stroke-width="1.8" fill="none" marker-end="url(#arr-cyan)" stroke-dasharray="6 3"/>
+      <rect x="718" y="328" width="134" height="22" rx="5" fill="#0d1117"/>
+      <text x="785" y="343" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#00d4ff">npm run build</text>
+
+      <!-- 14. vite.config.ts → Browser  (right side, down to browser) -->
+      <path d="M640 310 Q820 380 868 596" stroke="#00d4ff" stroke-width="2" fill="none" marker-end="url(#arr-cyan)"/>
+      <rect x="720" y="420" width="136" height="22" rx="5" fill="#0d1117"/>
+      <text x="788" y="435" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#00d4ff">serves :5173</text>
+
+      <!-- 15. index.html → main.tsx  (straight down inside src) -->
+      <line x1="300" y1="547" x2="300" y2="588" stroke="#ff00aa" stroke-width="2" fill="none" marker-end="url(#arr-pink)"/>
+      <rect x="240" y="558" width="106" height="20" rx="4" fill="#0a0f14"/>
+      <text x="293" y="572" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#ff00aa">&lt;script&gt; tag</text>
+
+      <!-- 16. main.tsx → App.tsx  (right arrow inside src) -->
+      <line x1="395" y1="626" x2="448" y2="585" stroke="#bc8cff" stroke-width="2" fill="none" marker-end="url(#arr-purple)"/>
+      <rect x="368" y="616" width="100" height="20" rx="4" fill="#0a0f14"/>
+      <text x="418" y="630" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#bc8cff">import+render</text>
+
+      <!-- 17. main.tsx mounts into index.html #root  (curved inside src) -->
+      <path d="M360 615 Q420 555 395 535" stroke="#bc8cff" stroke-width="1.8" fill="none" marker-end="url(#arr-purple)" stroke-dasharray="5 3"/>
+      <rect x="368" y="558" width="100" height="20" rx="4" fill="#0a0f14"/>
+      <text x="418" y="572" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#bc8cff">into #root</text>
+
+      <!-- 18. App.tsx → Browser  (right out of src to browser) -->
+      <line x1="670" y1="566" x2="868" y2="590" stroke="#3fb950" stroke-width="2" fill="none" marker-end="url(#arr-green)"/>
+      <rect x="698" y="556" width="120" height="22" rx="5" fill="#0d1117"/>
+      <text x="758" y="571" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3fb950">renders UI here</text>
+
+      <!-- 19. public/ → Browser  (down right side) -->
+      <line x1="982" y1="312" x2="982" y2="558" stroke="#2dd4bf" stroke-width="2" fill="none" marker-end="url(#arr-teal)"/>
+      <rect x="912" y="430" width="100" height="22" rx="5" fill="#0d1117"/>
+      <text x="962" y="445" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#2dd4bf">/logo.svg URLs</text>
+
+    </svg>
+    </div>
+
+    <!-- LEGEND -->
+    <div style="border-top:1px solid var(--border);padding:16px 24px;display:flex;flex-wrap:wrap;gap:20px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--muted);font-weight:700;align-self:center;">CONNECTIONS:</div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--yellow);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#e3b341" stroke-width="1.5" marker-end="url(#arr-yellow)"/></svg>
+        package.json rules
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--orange);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#ff7c43" stroke-width="1.5"/></svg>
+        lock file / versions
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--accent);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#00d4ff" stroke-width="1.5"/></svg>
+        Vite engine
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--purple);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#bc8cff" stroke-width="1.5"/></svg>
+        React injection chain
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--red);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#f85149" stroke-width="1.5"/></svg>
+        node_modules provides
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--muted);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#7d8590" stroke-width="1.5" stroke-dasharray="4 2"/></svg>
+        Git excludes
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:#2dd4bf;">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#2dd4bf" stroke-width="1.5"/></svg>
+        static assets
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--green);">
+        <svg width="24" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#3fb950" stroke-width="1.5"/></svg>
+        final app output
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 2. FILES ==================== -->
+<div class="files-grid">
+  <div class="section-title" style="grid-column:1/-1;">2. Files & Folders — What each one does and why it exists</div>
+
+  <!-- package.json -->
+  <div class="file-card" style="border-color:var(--yellow);">
+    <div class="file-header" style="background:rgba(227,179,65,0.08);">
+      <span class="file-icon">📦</span>
+      <div>
+        <div class="file-name" style="color:var(--yellow);">package.json</div>
+        <div class="file-role">Master dependency list + CLI command definitions</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-yellow"><span class="tldr-arrow">→</span><span class="tldr-text">Tells npm which libraries to download and what <code style="background:rgba(227,179,65,0.2);color:var(--yellow);padding:1px 5px;border-radius:3px;font-size:0.9em;">npm run dev</code> actually means. Without this file, your project doesn't exist.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">"dependencies": { react, react-dom }</span><span class="badge always">RUNTIME</span></div>
+          <div class="fact-desc">Libraries shipped to the browser. React itself lives here. Users download these.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">"devDependencies": { vite, typescript }</span><span class="badge config">BUILD ONLY</span></div>
+          <div class="fact-desc">Tools used only during development. Never shipped to users. Vite, TS compiler, plugins.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">"scripts": { dev, build, preview }</span></div>
+          <div class="fact-desc">Defines what "npm run dev" means → runs "vite". Without this, typing npm run dev fails.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">"^18.2.0" — the ^ symbol</span></div>
+          <div class="fact-desc">Accept 18.2.0 or any newer minor version, but NOT 19.0.0. Allows bug fixes, blocks breaking changes.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge always">YES</span></div>
+          <div class="fact-desc">Every time you add a new library with npm install X, this file is automatically updated.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- pnpm-lock.yaml -->
+  <div class="file-card" style="border-color:var(--orange);">
+    <div class="file-header" style="background:rgba(255,124,67,0.08);">
+      <span class="file-icon">🔒</span>
+      <div>
+        <div class="file-name" style="color:var(--orange);">pnpm-lock.yaml</div>
+        <div class="file-role">Exact version snapshot — auto-generated, never edit</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-orange"><span class="tldr-arrow">→</span><span class="tldr-text">Freezes exact library versions so every developer installs the identical code. Never touch it — it manages itself.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">What it stores</span></div>
+          <div class="fact-desc">While package.json says "react ^18.2.0", lock file records the EXACT installed version: react 18.2.0, scheduler 0.23.0, react-dom 18.2.0 — and their dependencies too.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Why it matters</span></div>
+          <div class="fact-desc">Makes your project reproducible. Your colleague runs npm install → gets byte-for-byte the exact same packages. "Works on my machine" becomes "works on all machines."</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">npm vs pnpm vs yarn</span></div>
+          <div class="fact-desc">package-lock.json = npm | pnpm-lock.yaml = pnpm | yarn.lock = yarn. Same concept, different format.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge never">NEVER</span></div>
+          <div class="fact-desc">Auto-managed. Always commit it to Git. Never delete it unless you want to force a full reinstall.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- tsconfig.json -->
+  <div class="file-card" style="border-color:var(--purple);">
+    <div class="file-header" style="background:rgba(188,140,255,0.08);">
+      <span class="file-icon">🔍</span>
+      <div>
+        <div class="file-name" style="color:var(--purple);">tsconfig.json / tsconfig.app.json / tsconfig.node.json</div>
+        <div class="file-role">TypeScript rulebook — how strict should type checking be</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-purple"><span class="tldr-arrow">→</span><span class="tldr-text">Tells TypeScript how strictly to check your code for errors. Three files because your React UI code and your config files run in different environments.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">tsconfig.json (root)</span></div>
+          <div class="fact-desc">Parent file. Doesn't set rules itself — just points to the two sub-configs below.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">tsconfig.app.json</span><span class="badge ts">BROWSER</span></div>
+          <div class="fact-desc">Rules for your React UI code — App.tsx, components. Has "jsx": "react-jsx" to understand JSX syntax.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">tsconfig.node.json</span><span class="badge config">NODE</span></div>
+          <div class="fact-desc">Rules for config files like vite.config.ts that run in Node, not the browser. Different environment = different rules.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">"strict": true</span></div>
+          <div class="fact-desc">The most important setting. Turns on all safety checks. TypeScript will catch bugs before they reach the browser.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge config">RARELY</span></div>
+          <div class="fact-desc">Leave as-is for most projects. You'd touch it only to add paths, adjust strictness, or configure special imports.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- vite.config.ts -->
+  <div class="file-card" style="border-color:var(--accent);">
+    <div class="file-header" style="background:rgba(0,212,255,0.08);">
+      <span class="file-icon">⚙️</span>
+      <div>
+        <div class="file-name" style="color:var(--accent);">vite.config.ts</div>
+        <div class="file-role">Build engine control panel — the most critical config file</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-cyan"><span class="tldr-arrow">→</span><span class="tldr-text">Configures Vite — the tool that compiles your code. The one line that matters most: <code style="background:rgba(0,212,255,0.2);color:var(--accent);padding:1px 5px;border-radius:3px;font-size:0.9em;">plugins: [react()]</code> — without it, nothing works.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">plugins: [react()]</span><span class="badge vite">CRITICAL</span></div>
+          <div class="fact-desc">THE most important line in this file. Without it, Vite doesn't understand JSX or .tsx files. Every &lt;div&gt; in your code is a syntax error. This plugin bridges React and Vite.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">server.port: 5173</span></div>
+          <div class="fact-desc">The dev server port. Change it here if 5173 is taken. localhost:5173 = your running app.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">build.outDir: 'dist'</span></div>
+          <div class="fact-desc">Where final built files go after "npm run build". This is what you deploy to a server or Netlify.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">defineConfig()</span></div>
+          <div class="fact-desc">A TypeScript helper that gives you autocomplete while editing this file. Not mandatory, just helpful.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge config">SOMETIMES</span></div>
+          <div class="fact-desc">When adding Vite plugins (TailwindCSS, PWA, etc.) or changing server settings. Otherwise leave alone.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- .gitignore -->
+  <div class="file-card" style="border-color:var(--muted);">
+    <div class="file-header" style="background:rgba(125,133,144,0.08);">
+      <span class="file-icon">🚫</span>
+      <div>
+        <div class="file-name" style="color:var(--muted);">.gitignore</div>
+        <div class="file-role">Git blocklist — files that NEVER go to GitHub</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-muted"><span class="tldr-arrow">→</span><span class="tldr-text">A list of files Git completely ignores. Most important entry: <code style="background:rgba(248,81,73,0.2);color:var(--red);padding:1px 5px;border-radius:3px;font-size:0.9em;">node_modules/</code> — 300MB of code nobody should upload.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">node_modules/</span><span class="badge never">NEVER COMMIT</span></div>
+          <div class="fact-desc">The most critical entry. 300MB+ of auto-generated package code. Anyone can regenerate it with "npm install" in 10 seconds. Uploading it to GitHub wastes everyone's time.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">dist/</span><span class="badge never">NEVER COMMIT</span></div>
+          <div class="fact-desc">The built output from "npm run build". Regenerated automatically. No point tracking it in Git.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">.env / .env.local</span><span class="badge never">SECURITY</span></div>
+          <div class="fact-desc">Environment variables — API keys, database URLs, secrets. If these go to GitHub, anyone can see them. Always in .gitignore.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge config">SOMETIMES</span></div>
+          <div class="fact-desc">When you add new secret files or folders you don't want tracked. Add the filename/folder name, one per line.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- node_modules/ -->
+  <div class="file-card" style="border-color:var(--red);">
+    <div class="file-header" style="background:rgba(248,81,73,0.08);">
+      <span class="file-icon">⚫</span>
+      <div>
+        <div class="file-name" style="color:var(--red);">node_modules/</div>
+        <div class="file-role">The "black hole" — actual library source code, 300MB+</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-red"><span class="tldr-arrow">→</span><span class="tldr-text">Where npm puts the real code of every library after you run <code style="background:rgba(63,185,80,0.2);color:var(--green);padding:1px 5px;border-radius:3px;font-size:0.9em;">npm install</code>. Never touch it. Delete it anytime — restores itself in seconds.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Created by</span><span class="badge never">AUTO-GENERATED</span></div>
+          <div class="fact-desc">"npm install" reads package.json and fills this folder with the real source code of every library. Hundreds of sub-folders, thousands of files.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">import React from 'react'</span></div>
+          <div class="fact-desc">When you write this in your code, Vite goes to node_modules/react/index.js to get the actual React source. The import is a shortcut. The code is in here.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Contains ~800 packages</span></div>
+          <div class="fact-desc">React depends on scheduler. Vite depends on esbuild, rollup, chokidar. Each of those has more dependencies. You install 5 things, you get 800.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge never">NEVER</span></div>
+          <div class="fact-desc">Never open it, never edit anything inside. Delete the whole folder freely — "npm install" rebuilds it in seconds.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- public/ -->
+  <div class="file-card" style="border-color:#2dd4bf;">
+    <div class="file-header" style="background:rgba(45,212,191,0.08);">
+      <span class="file-icon">📂</span>
+      <div>
+        <div class="file-name" style="color:#2dd4bf;">public/</div>
+        <div class="file-role">Static assets — served raw, zero processing by Vite</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-teal"><span class="tldr-arrow">→</span><span class="tldr-text">Drop files here that you want served exactly as-is — favicons, images, fonts. Reference with <code style="background:rgba(45,212,191,0.2);color:#2dd4bf;padding:1px 5px;border-radius:3px;font-size:0.9em;">/filename</code> in code. No import needed.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">How it works</span></div>
+          <div class="fact-desc">Files here bypass Vite entirely. Copied to the final build as-is. Reference with a leading slash in your code: &lt;img src="/logo.svg" /&gt;</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">What goes here</span></div>
+          <div class="fact-desc">favicon.ico, robots.txt, font files, images that never change, any static file you want available at a direct URL.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">vs src/assets/</span></div>
+          <div class="fact-desc">Files in src/assets/ are processed by Vite (hashed, optimized). Files in public/ are not. Use public/ for things that must keep their original filename.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge always">YES</span></div>
+          <div class="fact-desc">Add your favicon, app icons, any static asset that needs a direct URL. No import needed — just reference with /filename.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- src/ -->
+  <div class="file-card" style="border-color:var(--green);">
+    <div class="file-header" style="background:rgba(63,185,80,0.08);">
+      <span class="file-icon">💻</span>
+      <div>
+        <div class="file-name" style="color:var(--green);">src/</div>
+        <div class="file-role">Your source code — 99% of your actual work lives here</div>
+      </div>
+    </div>
+    <div class="file-tldr tldr-green"><span class="tldr-arrow">→</span><span class="tldr-text">Your workspace. Every component, every line of logic, every stylesheet you write goes in here. Vite compiles everything inside src/ before the browser ever sees it.</span></div>
+    <div class="file-body">
+      <ul class="fact-list">
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Processed by Vite</span><span class="badge vite">COMPILED</span></div>
+          <div class="fact-desc">Everything here gets compiled. TypeScript → JavaScript. JSX → function calls. CSS → bundled stylesheet. The browser never sees .tsx files directly.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">src/main.tsx</span><span class="badge entry">ENTRY POINT</span></div>
+          <div class="fact-desc">The bridge. Finds the #root div in index.html and mounts React into it. This is where JavaScript takes over the page.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">src/App.tsx</span><span class="badge always">ROOT COMPONENT</span></div>
+          <div class="fact-desc">Top of the component tree. Everything you build branches from here. The counter in the video lives here.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">src/components/</span></div>
+          <div class="fact-desc">You create this folder yourself. One file per component: Button.tsx, Header.tsx, Sidebar.tsx. Import them into App.tsx.</div>
+        </li>
+        <li class="fact-item">
+          <div class="fact-top"><span class="fact-name">Do you edit it?</span><span class="badge always">ALWAYS</span></div>
+          <div class="fact-desc">This is your workspace. Every component, every hook, every stylesheet you write goes inside src/.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 3. INJECTION CHAIN ==================== -->
+<div class="timeline">
+  <div class="section-title">3. Injection Chain — What happens step by step from blank HTML to running app</div>
+  <div class="timeline-steps">
+
+    <div class="step">
+      <div class="step-header">
+        <span class="step-time">Step 1</span>
+        <span class="step-title">🌐 Browser loads index.html from Vite dev server</span>
+      </div>
+      <div class="step-detail">Vite serves this file when you open localhost:5173. The page is a shell — almost completely empty.</div>
+    </div>
+
+    <div class="step yellow-step">
+      <div class="step-header">
+        <span class="step-time">Step 2</span>
+        <span class="step-title">📄 index.html — the skeleton with one empty div</span>
+      </div>
+      <div class="step-detail">&lt;div id="root"&gt;&lt;/div&gt; — this is the ONLY thing that matters in this file. Empty. React will fill it. Also loads main.tsx via &lt;script&gt; tag.</div>
+    </div>
+
+    <div class="step purple-step">
+      <div class="step-header">
+        <span class="step-time">Step 3</span>
+        <span class="step-title">🌑 At this moment — the page is completely blank</span>
+      </div>
+      <div class="step-detail">HTML loaded, div exists, but React hasn't run yet. If you disable JavaScript, you'd see an empty white page forever. This is normal.</div>
+    </div>
+
+    <div class="step accent2-step">
+      <div class="step-header">
+        <span class="step-time">Step 4</span>
+        <span class="step-title">🔗 main.tsx runs — the bridge connects React to the HTML</span>
+      </div>
+      <div class="step-detail">ReactDOM.createRoot(document.getElementById('root')!) — finds that div. Hands control of it to React. React now owns everything inside #root.</div>
+    </div>
+
+    <div class="step accent2-step">
+      <div class="step-header">
+        <span class="step-time">Step 5</span>
+        <span class="step-title">❗ The ! after getElementById — TypeScript assertion</span>
+      </div>
+      <div class="step-detail">getElementById() can return null if the element doesn't exist. The ! tells TypeScript "I guarantee it exists, stop warning me." Without it, TypeScript error.</div>
+    </div>
+
+    <div class="step green-step">
+      <div class="step-header">
+        <span class="step-time">Step 6</span>
+        <span class="step-title">⚛️ .render(&lt;App /&gt;) — React renders your component tree into #root</span>
+      </div>
+      <div class="step-detail">React converts App.tsx and all its children into real DOM elements and inserts them into the empty div. The page is now alive.</div>
+    </div>
+
+    <div class="step orange-step">
+      <div class="step-header">
+        <span class="step-time">Step 7</span>
+        <span class="step-title">🖱️ User clicks button → useState triggers re-render</span>
+      </div>
+      <div class="step-detail">setCount(count + 1) → React compares old vs new component tree → only updates the changed DOM node. No page reload. No full re-render. Just the diff.</div>
+    </div>
+
+    <div class="step green-step">
+      <div class="step-header">
+        <span class="step-time">Step 8</span>
+        <span class="step-title">✅ DevTools → Elements — proof that React injected everything</span>
+      </div>
+      <div class="step-detail">&lt;div id="root"&gt; is now full of your components' HTML output. It was empty before main.tsx ran. Everything inside it is React-managed.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 4. GLOBAL CONCEPTS ==================== -->
+<div class="globals">
+  <div class="section-title">4. Key Concepts — Terms you need to know</div>
+  <div class="globals-grid">
+
+    <div class="global-card">
+      <div class="global-name">JSX</div>
+      <div class="global-field"><span>What it looks like:</span> &lt;div&gt;Hello&lt;/div&gt;</div>
+      <div class="global-field"><span>What it actually is:</span> JavaScript syntax</div>
+      <div class="global-field"><span>Who processes it:</span> Vite + react() plugin</div>
+      <div class="global-field"><span>Compiled to:</span> React.createElement()</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">Not HTML. Not a template. Pure JavaScript disguised as HTML.</div>
+    </div>
+
+    <div class="global-card">
+      <div class="global-name">useState</div>
+      <div class="global-field"><span>What it is:</span> React Hook</div>
+      <div class="global-field"><span>Usage:</span> const [count, setCount] = useState(0)</div>
+      <div class="global-field"><span>count =</span> current value (read only)</div>
+      <div class="global-field"><span>setCount =</span> function to change it</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">Every setCount() call triggers a re-render of this component.</div>
+    </div>
+
+    <div class="global-card">
+      <div class="global-name">Component</div>
+      <div class="global-field"><span>What it is:</span> A JavaScript function</div>
+      <div class="global-field"><span>Returns:</span> JSX (looks like HTML)</div>
+      <div class="global-field"><span>Example:</span> function App() { return &lt;div&gt;...&lt;/div&gt; }</div>
+      <div class="global-field"><span>Used as:</span> &lt;App /&gt; anywhere in JSX</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">Capital letter = component. Lowercase = real HTML tag.</div>
+    </div>
+
+    <div class="global-card">
+      <div class="global-name">Hot Reload (HMR)</div>
+      <div class="global-field"><span>What it is:</span> Vite feature</div>
+      <div class="global-field"><span>What it does:</span> Updates browser on file save</div>
+      <div class="global-field"><span>Without reload:</span> Preserves state</div>
+      <div class="global-field"><span>How fast:</span> ~50ms update</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">Save a .tsx file → browser updates instantly. No F5 needed.</div>
+    </div>
+
+    <div class="global-card">
+      <div class="global-name">StrictMode</div>
+      <div class="global-field"><span>Where:</span> main.tsx wraps &lt;App /&gt;</div>
+      <div class="global-field"><span>In development:</span> renders twice to find bugs</div>
+      <div class="global-field"><span>In production:</span> completely removed</div>
+      <div class="global-field"><span>Purpose:</span> catch side effects early</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">If your effect runs twice in dev, StrictMode is why. Normal behavior.</div>
+    </div>
+
+    <div class="global-card">
+      <div class="global-name">Props</div>
+      <div class="global-field"><span>What they are:</span> Parameters for components</div>
+      <div class="global-field"><span>Passed as:</span> &lt;Button color="blue" /&gt;</div>
+      <div class="global-field"><span>Received as:</span> function Button({ color })</div>
+      <div class="global-field"><span>Direction:</span> parent → child only</div>
+      <div class="global-field" style="color:var(--yellow);margin-top:6px;font-size:0.65em;">Data flows DOWN the tree. Child cannot modify parent's state via props.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 5. DO YOU EDIT? ==================== -->
+<div class="endpoints">
+  <div class="section-title">5. Edit frequency — When do you actually touch each file</div>
+  <div class="endpoint-grid">
+
+    <div class="endpoint">
+      <span class="method-badge always">ALWAYS</span>
+      <div>
+        <div class="endpoint-path">src/App.tsx</div>
+        <div class="endpoint-desc">Starting point for your UI. Every project, every day.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge always">ALWAYS</span>
+      <div>
+        <div class="endpoint-path">src/components/*.tsx</div>
+        <div class="endpoint-desc">You create these. One file per component. Your main workspace.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge always">ALWAYS</span>
+      <div>
+        <div class="endpoint-path">package.json</div>
+        <div class="endpoint-desc">Updated automatically every time you run "npm install X".</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge rarely">RARELY</span>
+      <div>
+        <div class="endpoint-path">vite.config.ts</div>
+        <div class="endpoint-desc">Only when adding Vite plugins or changing server port.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge rarely">RARELY</span>
+      <div>
+        <div class="endpoint-path">index.html</div>
+        <div class="endpoint-desc">Maybe to change the page title or add a meta tag. That's it.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge rarely">RARELY</span>
+      <div>
+        <div class="endpoint-path">src/main.tsx</div>
+        <div class="endpoint-desc">Almost never after initial setup. Maybe to add a global Provider.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge rarely">RARELY</span>
+      <div>
+        <div class="endpoint-path">tsconfig.json</div>
+        <div class="endpoint-desc">Rarely. Only to adjust strictness or add path aliases.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge git2">GIT ONLY</span>
+      <div>
+        <div class="endpoint-path">.gitignore</div>
+        <div class="endpoint-desc">Only when you add new files/folders you don't want in Git.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge never">NEVER</span>
+      <div>
+        <div class="endpoint-path">node_modules/</div>
+        <div class="endpoint-desc">Never open, never edit. Delete it freely, npm install restores it.</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <span class="method-badge never">NEVER</span>
+      <div>
+        <div class="endpoint-path">pnpm-lock.yaml</div>
+        <div class="endpoint-desc">Auto-managed. Commit to Git. Never manually edit.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 6. KEY FACTS ==================== -->
+<div class="optimizations">
+  <div class="section-title">6. Things you must understand — Key mental models</div>
+  <div class="opt-grid">
+
+    <div class="opt-card">
+      <div class="opt-title">⚛️ The Injection Chain</div>
+      <div class="opt-desc">React doesn't magically appear. It follows a fixed 3-step chain every time.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">WRONG mental model</div>
+          "React generates the HTML page"
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">CORRECT mental model</div>
+          index.html → main.tsx → App.tsx → fills #root div
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-title">📦 node_modules is not your code</div>
+      <div class="opt-desc">It's a cache of library code. Treat it like a generated build artifact.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">WRONG mental model</div>
+          Editing files in node_modules
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">CORRECT mental model</div>
+          Delete it. npm install. Back in seconds.
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-title">🔄 JSX is NOT HTML</div>
+      <div class="opt-desc">JSX looks like HTML but it's JavaScript. Vite compiles it before the browser ever sees it.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">You write (JSX)</div>
+          &lt;button onClick={fn}&gt;Click&lt;/button&gt;
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">Browser gets (JS)</div>
+          React.createElement('button', {onClick: fn}, 'Click')
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-title">💾 State vs Variables</div>
+      <div class="opt-desc">Regular variables reset on every render. useState persists between renders.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">BROKEN — resets every render</div>
+          let count = 0; count++
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">CORRECT — React remembers it</div>
+          const [count, setCount] = useState(0)
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-card">
+      <div class="opt-title">🔧 public/ vs src/assets/</div>
+      <div class="opt-desc">Two places for files — completely different treatment by Vite.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">public/ — raw, no processing</div>
+          &lt;img src="/logo.svg" /&gt; ← direct URL
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">src/assets/ — processed by Vite</div>
+          import logo from './assets/logo.svg'
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-card" style="border-color:var(--accent);">
+      <div class="opt-title" style="color:var(--accent);">📊 The full startup chain</div>
+      <div class="opt-desc">What happens when you type "npm run dev" and press Enter.</div>
+      <div class="opt-before-after">
+        <div class="opt-before">
+          <div class="opt-label">What you type</div>
+          npm run dev
+        </div>
+        <div class="opt-after">
+          <div class="opt-label">What actually runs</div>
+          package.json scripts → vite → reads vite.config.ts → processes src/ → serves localhost:5173
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== SUMMARY ==================== -->
+<div style="max-width:1100px;margin:0 auto 60px;">
+  <div class="section-title">7. How it all works — The big picture in plain words</div>
+
+  <!-- The one-paragraph summary -->
+  <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07) 0%,rgba(188,140,255,0.07) 100%);border:1px solid rgba(0,212,255,0.25);border-radius:14px;padding:28px 32px;margin-bottom:24px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;letter-spacing:0.12em;text-transform:uppercase;color:#00d4ff;margin-bottom:14px;font-weight:700;">The whole thing in one paragraph</div>
+    <p style="font-size:1.05em;line-height:1.85;color:var(--text);font-family:'Space Grotesk',sans-serif;font-weight:400;">
+      You write code inside <span style="color:#3fb950;font-weight:700;">src/</span>. Vite — configured by <span style="color:#00d4ff;font-weight:700;">vite.config.ts</span> — reads your TypeScript and JSX, compiles it into plain JavaScript the browser understands, and serves it live at <span style="color:#3fb950;font-weight:700;">localhost:5173</span>. When the browser opens that page, it receives <span style="color:#ff00aa;font-weight:700;">index.html</span> — an almost empty shell with one div. That div triggers <span style="color:#bc8cff;font-weight:700;">main.tsx</span>, which mounts your entire React app into it. Every component, every button, every state change — React manages it all inside that one div, updating only what changed, without ever reloading the page. The config files set the rules. <span style="color:#f85149;font-weight:700;">node_modules/</span> holds the tools. <span style="color:#2dd4bf;font-weight:700;">public/</span> holds static files. Everything else is <span style="color:#3fb950;font-weight:700;">src/</span>.
+    </p>
+  </div>
+
+  <!-- 3-column: What starts what / What you do / What you never touch -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px;">
+
+    <!-- Column 1: The startup sequence -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="background:rgba(0,212,255,0.1);border-bottom:1px solid rgba(0,212,255,0.2);padding:14px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;letter-spacing:0.1em;text-transform:uppercase;color:#00d4ff;font-weight:700;">⚡ What starts what</div>
+        <div style="font-size:0.78em;color:var(--muted);margin-top:4px;">The sequence when you type npm run dev</div>
+      </div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#e3b341;background:rgba(227,179,65,0.12);padding:3px 8px;border-radius:4px;flex-shrink:0;">1</span>
+          <span style="font-size:0.82em;color:var(--text);">npm reads <span style="color:#e3b341;font-weight:700;">package.json</span> → finds the "dev" script</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#00d4ff;background:rgba(0,212,255,0.12);padding:3px 8px;border-radius:4px;flex-shrink:0;">2</span>
+          <span style="font-size:0.82em;color:var(--text);">Runs <span style="color:#00d4ff;font-weight:700;">vite</span> → reads <span style="color:#00d4ff;font-weight:700;">vite.config.ts</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#bc8cff;background:rgba(188,140,255,0.12);padding:3px 8px;border-radius:4px;flex-shrink:0;">3</span>
+          <span style="font-size:0.82em;color:var(--text);">Vite compiles <span style="color:#3fb950;font-weight:700;">src/</span>, uses <span style="color:#bc8cff;font-weight:700;">tsconfig</span> for TS rules</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#ff00aa;background:rgba(255,0,170,0.12);padding:3px 8px;border-radius:4px;flex-shrink:0;">4</span>
+          <span style="font-size:0.82em;color:var(--text);">Browser gets <span style="color:#ff00aa;font-weight:700;">index.html</span> → runs <span style="color:#bc8cff;font-weight:700;">main.tsx</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#3fb950;background:rgba(63,185,80,0.12);padding:3px 8px;border-radius:4px;flex-shrink:0;">5</span>
+          <span style="font-size:0.82em;color:var(--text);"><span style="color:#3fb950;font-weight:700;">App.tsx</span> mounts → your UI appears in browser</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: What you do as a developer -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="background:rgba(63,185,80,0.1);border-bottom:1px solid rgba(63,185,80,0.2);padding:14px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;letter-spacing:0.1em;text-transform:uppercase;color:#3fb950;font-weight:700;">🛠 What you actually do</div>
+        <div style="font-size:0.78em;color:var(--muted);margin-top:4px;">Your real daily workflow as a developer</div>
+      </div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#3fb950;font-weight:700;margin-bottom:3px;">Write components in src/</div>
+          <div style="font-size:0.78em;color:var(--muted);">Create .tsx files, build UI, add logic, import from each other</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#e3b341;font-weight:700;margin-bottom:3px;">Add libraries with npm install X</div>
+          <div style="font-size:0.78em;color:var(--muted);">package.json + lock file update automatically</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#2dd4bf;font-weight:700;margin-bottom:3px;">Drop images/icons in public/</div>
+          <div style="font-size:0.78em;color:var(--muted);">Reference as /filename.png — no import needed</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;color:#00d4ff;font-weight:700;margin-bottom:3px;">Run npm run build to ship</div>
+          <div style="font-size:0.78em;color:var(--muted);">Vite outputs optimised files to dist/ — deploy that folder</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 3: What you never touch -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="background:rgba(248,81,73,0.1);border-bottom:1px solid rgba(248,81,73,0.2);padding:14px 18px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;letter-spacing:0.1em;text-transform:uppercase;color:#f85149;font-weight:700;">🚫 What you never touch</div>
+        <div style="font-size:0.78em;color:var(--muted);margin-top:4px;">Files that manage themselves — hands off</div>
+      </div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.8em;color:#f85149;font-weight:700;min-width:130px;">node_modules/</span>
+          <span style="font-size:0.78em;color:var(--muted);">Auto-generated. Delete freely, npm install restores it.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.8em;color:#ff7c43;font-weight:700;min-width:130px;">pnpm-lock.yaml</span>
+          <span style="font-size:0.78em;color:var(--muted);">Auto-managed. Commit to Git. Never edit by hand.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.8em;color:#7d8590;font-weight:700;min-width:130px;">dist/</span>
+          <span style="font-size:0.78em;color:var(--muted);">Build output. Regenerated every time you build.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.8em;color:#bc8cff;font-weight:700;min-width:130px;">main.tsx</span>
+          <span style="font-size:0.78em;color:var(--muted);">Set once at project start. Rarely touched after that.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom one-liners: the mental models -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:16px;">💡 The 5 things to remember</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#00d4ff;font-size:1.2em;flex-shrink:0;">→</span>
+        <span style="font-size:0.85em;color:var(--text);line-height:1.6;"><strong style="color:#00d4ff;">vite.config.ts</strong> is the engine. Without <code style="background:rgba(0,212,255,0.12);color:#00d4ff;padding:1px 5px;border-radius:3px;">plugins:[react()]</code> nothing compiles.</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#ff00aa;font-size:1.2em;flex-shrink:0;">→</span>
+        <span style="font-size:0.85em;color:var(--text);line-height:1.6;"><strong style="color:#ff00aa;">index.html</strong> is just a shell. It stays empty until React fills it.</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#bc8cff;font-size:1.2em;flex-shrink:0;">→</span>
+        <span style="font-size:0.85em;color:var(--text);line-height:1.6;"><strong style="color:#bc8cff;">main.tsx</strong> is the glue. It's the one line that connects HTML to React.</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#3fb950;font-size:1.2em;flex-shrink:0;">→</span>
+        <span style="font-size:0.85em;color:var(--text);line-height:1.6;"><strong style="color:#3fb950;">src/</strong> is your world. Everything you build lives here. Everything else is setup.</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#f85149;font-size:1.2em;flex-shrink:0;">→</span>
+        <span style="font-size:0.85em;color:var(--text);line-height:1.6;"><strong style="color:#f85149;">node_modules/</strong> is not your code. Never edit it, never commit it, delete it freely.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer" style="padding-top:20px;border-top:1px solid var(--border);margin-top:40px;">
+  React + Vite Architecture &nbsp;|&nbsp; TypeScript + JSX + Vite 5 + React 18 &nbsp;|&nbsp; index.html → main.tsx → App.tsx → localhost:5173
+</div>
+
+</body>
+</html>
